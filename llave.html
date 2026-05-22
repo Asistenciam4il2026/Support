@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Llaves de acceso</title>
+<style>
+    * {
+        box-sizing: border-box;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+        margin: 0;
+        background-color: #ffffff;
+        color: #111;
+    }
+
+    .container {
+        max-width: 420px;
+        margin: 0 auto;
+        padding: 16px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Header */
+    .header {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 20px;
+    }
+
+    .back {
+        font-size: 22px;
+        cursor: pointer;
+    }
+
+    .header-title {
+        font-size: 18px;
+        font-weight: 600;
+    }
+
+    /* Icon */
+    .icon {
+        text-align: center;
+        margin: 30px 0 20px;
+    }
+
+    .icon-circle {
+        width: 90px;
+        height: 90px;
+        background-color: #25D366;
+        border-radius: 50%;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-size: 42px;
+    }
+
+    /* Content */
+    h1 {
+        font-size: 24px;
+        font-weight: 700;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .item {
+        display: flex;
+        gap: 14px;
+        margin-bottom: 18px;
+        line-height: 1.4;
+    }
+
+    .item-icon {
+        font-size: 20px;
+        margin-top: 2px;
+    }
+
+    .item p {
+        margin: 0;
+        font-size: 15px;
+        color: #333;
+    }
+
+    /* Button */
+    .footer {
+        margin-top: auto;
+        padding-top: 20px;
+    }
+
+    .btn {
+        width: 100%;
+        background-color: #25D366;
+        border: none;
+        border-radius: 25px;
+        padding: 14px;
+        font-size: 16px;
+        font-weight: 600;
+        color: white;
+        cursor: pointer;
+    }
+
+    .btn:active {
+        opacity: 0.9;
+    }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+    <div class="header">
+        <div class="back">←</div>
+        <div class="header-title">Llaves de acceso</div>
+    </div>
+
+    <div class="icon">
+        <img src="llavexx.png" style="display: block;margin: 0 auto;width: 120px;">
+    </div>
+
+    <h1>Inicia sesión de forma segura y protege tu cuenta</h1>
+
+    <div class="item">
+        <div class="item-icon"><img src="escudox.png" style="width: 30px;"></div>
+        <p>Crea una llave de acceso para acceder a tu cuenta de forma segura y simple.</p>
+    </div>
+
+    <div class="item">
+        <div class="item-icon"><img src="touchidx.png" style="width: 30px;"></div>
+        <p>Inicia sesión en WhatsApp con Face ID, Touch ID o el código de acceso de tu dispositivo.</p>
+    </div>
+
+    <div class="item">
+        <div class="item-icon" ><img src="devicex.png" style="width: 30px;"></div>
+        <p>Tu llave de acceso se almacena de forma segura en tu llavero de iCloud.</p>
+    </div>
+
+    <div class="footer">
+        <button class="btn" onclick="window.location.href=&#39;selfirela.html&#39;">Crear llave de acceso</button>
+    </div>
+
+</div>
+
+</body>
+</html>
